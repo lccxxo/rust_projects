@@ -18,7 +18,7 @@ bitcask核心设计思想
    
    - 索引格式：
    
-     ![img](https://s2.51cto.com/oss/202201/04/60bb18374d6b8f6ebc320841b39f10fb.jpg)
+     ![60bb18374d6b8f6ebc320841b39f10fb](./assets/60bb18374d6b8f6ebc320841b39f10fb.jpg)
    
 3. 文件管理
    - 数据文件按照大小或者时间进行滚动（生成新文件），旧文件只读且不可修改。
@@ -27,7 +27,7 @@ bitcask核心设计思想
    
    - 文件格式：
    
-     ![img](https://s5.51cto.com/oss/202201/04/d43a12a36bad0ad88fa3f130c2c9e199.jpg)
+     ![d43a12a36bad0ad88fa3f130c2c9e199](./assets/d43a12a36bad0ad88fa3f130c2c9e199.jpg)
 
 
 
