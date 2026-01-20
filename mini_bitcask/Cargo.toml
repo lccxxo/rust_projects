@@ -1,5 +1,5 @@
 [package]
-name = "mini-bitcask"
+name = "mini_bitcask"
 version = "0.1.0"
 edition = "2024"
 
