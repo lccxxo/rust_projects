@@ -68,17 +68,15 @@ mod tests {
     fn test_profile_json_roundtrip() {
         let group = SessionGroup {
             name: "Production".to_string(),
-            sessions: vec![
-                SessionProfile::Ssh(SshProfile {
-                    id: "test-id".to_string(),
-                    name: "web-server".to_string(),
-                    host: "192.168.1.10".to_string(),
-                    port: 22,
-                    username: "user".to_string(),
-                    auth: SshAuth::Password,
-                    proxy_jump: None,
-                }),
-            ],
+            sessions: vec![SessionProfile::Ssh(SshProfile {
+                id: "test-id".to_string(),
+                name: "web-server".to_string(),
+                host: "192.168.1.10".to_string(),
+                port: 22,
+                username: "user".to_string(),
+                auth: SshAuth::Password,
+                proxy_jump: None,
+            })],
         };
         let json = serde_json::to_string(&group).unwrap();
         let decoded: SessionGroup = serde_json::from_str(&json).unwrap();
