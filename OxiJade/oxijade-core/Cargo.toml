@@ -1,0 +1,12 @@
+[package]
+name = "oxijade-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+oxijade-config = { path = "../oxijade-config" }
+vte = "0.13"
+portable-pty = "0.8"
+tokio = { version = "1", features = ["full"] }
+bitflags = "2"
+anyhow = "1"
