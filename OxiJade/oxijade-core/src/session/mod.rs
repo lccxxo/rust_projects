@@ -1,4 +1,5 @@
 pub mod local;
+pub mod manager;
 
 #[derive(Debug)]
 pub enum SessionEvent {
