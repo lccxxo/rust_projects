@@ -28,14 +28,19 @@ pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
         ui.separator();
         ui.add_space(4.0);
 
-        ui.add_enabled(
-            false,
-            egui::Button::new(
-                RichText::new("＋ 新建会话 (即将推出)")
-                    .color(Theme::TEXT_MUTED)
+        let add_resp = ui.add(
+            egui::Label::new(
+                RichText::new("＋ 新建 SSH 会话")
+                    .color(Theme::ACCENT_SSH)
                     .size(12.0),
-            ),
+            )
+            .sense(egui::Sense::click()),
         );
+        if add_resp.clicked() {
+            app.dialog = crate::dialogs::DialogState::SshForm(
+                crate::dialogs::SshFormState::default(),
+            );
+        }
     });
 }
 
@@ -123,6 +128,48 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                         });
                         (Some(s), None)
                     }
+                    Err(e) => (None, Some(format!("{e:#}"))),
+                };
+
+                app.rt.spawn(async move {
+                    while let Some(event) = rx.recv().await {
+                        match event {
+                            SessionEvent::Output(bytes) => {
+                                let mut g = grid_clone.lock().unwrap();
+                                g.process_bytes(&bytes);
+                            }
+                            SessionEvent::Exited => break,
+                        }
+                    }
+                });
+
+                app.running.insert(
+                    id,
+                    RunningSession {
+                        grid,
+                        local: session,
+                        error,
+                        scroll_offset: 0,
+                    },
+                );
+            } else if let SessionProfile::Ssh(ssh_profile) = profile {
+                use crate::app::RunningSession;
+                use oxijade_core::session::local::LocalSession;
+                use oxijade_core::session::ssh::build_args;
+                use oxijade_core::session::SessionEvent;
+                use oxijade_core::terminal::TerminalGrid;
+                use std::sync::{Arc, Mutex};
+
+                let grid = Arc::new(Mutex::new(TerminalGrid::new(220, 50)));
+                let grid_clone = grid.clone();
+                let (tx, mut rx) = tokio::sync::mpsc::channel::<SessionEvent>(256);
+
+                let _guard = app.rt.enter();
+                let args = build_args(ssh_profile);
+                let session_result = LocalSession::new(id.clone(), args, tx);
+
+                let (session, error) = match session_result {
+                    Ok(s) => (Some(s), None),
                     Err(e) => (None, Some(format!("{e:#}"))),
                 };
 
