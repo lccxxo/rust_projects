@@ -7,11 +7,27 @@ use std::io::Write;
 pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
     let Some(tab_id) = app.active_tab.clone() else {
         ui.centered_and_justified(|ui| {
-            ui.label(
-                egui::RichText::new("选择或创建一个会话")
-                    .color(Theme::TEXT_MUTED)
-                    .size(14.0),
-            );
+            ui.vertical_centered(|ui| {
+                ui.add_space(20.0);
+                ui.label(
+                    egui::RichText::new("⬡ OxiJade")
+                        .color(Theme::ACCENT_SSH)
+                        .size(28.0)
+                        .strong(),
+                );
+                ui.add_space(12.0);
+                ui.label(
+                    egui::RichText::new("点击左侧会话列表中的会话来打开终端")
+                        .color(Theme::TEXT_MUTED)
+                        .size(14.0),
+                );
+                ui.add_space(6.0);
+                ui.label(
+                    egui::RichText::new("Click a session in the left panel to open a terminal")
+                        .color(Theme::TEXT_MUTED)
+                        .size(12.0),
+                );
+            });
         });
         return;
     };

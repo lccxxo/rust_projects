@@ -19,6 +19,34 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "OxiJade",
         options,
-        Box::new(|_cc| Ok(Box::new(app::OxiJadeApp::default()))),
+        Box::new(|cc| {
+            // Load a system CJK font so Chinese characters render correctly
+            let mut fonts = egui::FontDefinitions::default();
+            for path in &[
+                "C:/Windows/Fonts/msyh.ttc",  // Microsoft YaHei
+                "C:/Windows/Fonts/msyh.ttf",
+                "C:/Windows/Fonts/simsun.ttc", // SimSun fallback
+            ] {
+                if let Ok(data) = std::fs::read(path) {
+                    fonts
+                        .font_data
+                        .insert("cjk".to_owned(), egui::FontData::from_owned(data));
+                    // Add CJK font as a fallback after the default font
+                    fonts
+                        .families
+                        .entry(egui::FontFamily::Proportional)
+                        .or_default()
+                        .push("cjk".to_owned());
+                    fonts
+                        .families
+                        .entry(egui::FontFamily::Monospace)
+                        .or_default()
+                        .push("cjk".to_owned());
+                    break;
+                }
+            }
+            cc.egui_ctx.set_fonts(fonts);
+            Ok(Box::new(app::OxiJadeApp::default()))
+        }),
     )
 }

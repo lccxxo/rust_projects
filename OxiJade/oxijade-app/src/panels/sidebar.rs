@@ -3,6 +3,7 @@ use crate::app::OxiJadeApp;
 use crate::theme::Theme;
 use egui::{Color32, RichText, Ui};
 use oxijade_config::SessionProfile;
+use std::io::Write;
 
 pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
     egui::ScrollArea::vertical().show(ui, |ui| {
@@ -103,6 +104,17 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                 let grid_clone = grid.clone();
                 let (tx, mut rx) = tokio::sync::mpsc::channel::<SessionEvent>(256);
                 let session = LocalSession::new(id.clone(), local_profile.shell.clone(), tx).ok();
+
+                // Switch terminal to UTF-8 so Chinese output renders correctly
+                if let Some(ref s) = session {
+                    let w = s.writer.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(300));
+                        let mut guard = w.lock().unwrap();
+                        let _ = guard.write_all(b"chcp 65001\r\n");
+                        let _ = guard.flush();
+                    });
+                }
 
                 app.rt.spawn(async move {
                     while let Some(event) = rx.recv().await {
