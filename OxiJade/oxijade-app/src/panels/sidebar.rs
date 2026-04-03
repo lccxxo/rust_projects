@@ -150,6 +150,7 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                         local: session,
                         error,
                         scroll_offset: 0,
+                        split: None,
                     },
                 );
             } else if let SessionProfile::Ssh(ssh_profile) = profile {
@@ -192,6 +193,7 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                         local: session,
                         error,
                         scroll_offset: 0,
+                        split: None,
                     },
                 );
             }
