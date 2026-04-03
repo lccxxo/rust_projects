@@ -1,5 +1,120 @@
-pub fn show(ui: &mut egui::Ui, _app: &mut crate::app::OxiJadeApp) {
+// oxijade-app/src/panels/tab_bar.rs
+use crate::app::OxiJadeApp;
+use crate::theme::Theme;
+use egui::{Color32, RichText, Ui};
+use oxijade_config::SessionProfile;
+
+pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
     ui.horizontal(|ui| {
-        ui.label("⬡ OxiJade");
+        ui.add_space(8.0);
+        ui.label(RichText::new("⬡").color(Theme::ACCENT_SSH).size(16.0));
+        ui.label(
+            RichText::new("OxiJade")
+                .color(Theme::TEXT_PRIMARY)
+                .size(13.0)
+                .strong(),
+        );
+        ui.add_space(12.0);
+        ui.separator();
+        ui.add_space(4.0);
+
+        let tabs = app.open_tabs.clone();
+        let mut to_close: Option<String> = None;
+
+        for tab_id in &tabs {
+            let is_active = app.active_tab.as_deref() == Some(tab_id.as_str());
+            let tab_name =
+                find_profile_name(&app.profiles.groups, tab_id).unwrap_or_else(|| tab_id.clone());
+            let accent = find_profile_accent(&app.profiles.groups, tab_id);
+
+            let bg = if is_active {
+                Theme::BG_PANEL
+            } else {
+                Color32::TRANSPARENT
+            };
+
+            let tab_response = egui::Frame::none()
+                .fill(bg)
+                .rounding(egui::Rounding {
+                    nw: 4.0,
+                    ne: 4.0,
+                    sw: 0.0,
+                    se: 0.0,
+                })
+                .inner_margin(egui::Margin::symmetric(10.0, 4.0))
+                .show(ui, |ui| {
+                    if is_active {
+                        ui.painter().hline(
+                            ui.max_rect().x_range(),
+                            ui.max_rect().top(),
+                            egui::Stroke::new(2.0, accent),
+                        );
+                    }
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(&tab_name)
+                                .color(if is_active {
+                                    Theme::TEXT_PRIMARY
+                                } else {
+                                    Theme::TEXT_MUTED
+                                })
+                                .size(12.0),
+                        );
+                        if ui
+                            .small_button(RichText::new("×").color(Theme::TEXT_MUTED))
+                            .clicked()
+                        {
+                            to_close = Some(tab_id.clone());
+                        }
+                    });
+                });
+
+            if tab_response
+                .response
+                .interact(egui::Sense::click())
+                .clicked()
+            {
+                app.active_tab = Some(tab_id.clone());
+            }
+        }
+
+        if let Some(id) = to_close {
+            app.open_tabs.retain(|t| t != &id);
+            if app.active_tab.as_deref() == Some(id.as_str()) {
+                app.active_tab = app.open_tabs.last().cloned();
+            }
+        }
+
+        if ui
+            .button(RichText::new("+").color(Theme::ACCENT_LOCAL))
+            .clicked()
+        {
+            // Plan 2
+        }
     });
+}
+
+fn find_profile_name(groups: &[oxijade_config::SessionGroup], id: &str) -> Option<String> {
+    for group in groups {
+        for session in &group.sessions {
+            if session.id() == id {
+                return Some(session.name().to_string());
+            }
+        }
+    }
+    None
+}
+
+fn find_profile_accent(groups: &[oxijade_config::SessionGroup], id: &str) -> egui::Color32 {
+    for group in groups {
+        for session in &group.sessions {
+            if session.id() == id {
+                return match session {
+                    SessionProfile::Local(_) => Theme::ACCENT_LOCAL,
+                    SessionProfile::Ssh(_) => Theme::ACCENT_SSH,
+                };
+            }
+        }
+    }
+    Theme::ACCENT_LOCAL
 }
