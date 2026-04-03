@@ -28,16 +28,14 @@ pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
         ui.separator();
         ui.add_space(4.0);
 
-        if ui
-            .button(
-                RichText::new("＋ 新建会话")
-                    .color(Theme::ACCENT_LOCAL)
+        ui.add_enabled(
+            false,
+            egui::Button::new(
+                RichText::new("＋ 新建会话 (即将推出)")
+                    .color(Theme::TEXT_MUTED)
                     .size(12.0),
-            )
-            .clicked()
-        {
-            // Plan 2: open new session dialog
-        }
+            ),
+        );
     });
 }
 
@@ -103,18 +101,30 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                 let grid = Arc::new(Mutex::new(TerminalGrid::new(220, 50)));
                 let grid_clone = grid.clone();
                 let (tx, mut rx) = tokio::sync::mpsc::channel::<SessionEvent>(256);
-                let session = LocalSession::new(id.clone(), local_profile.shell.clone(), tx).ok();
 
-                // Switch terminal to UTF-8 so Chinese output renders correctly
-                if let Some(ref s) = session {
-                    let w = s.writer.clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(300));
-                        let mut guard = w.lock().unwrap();
-                        let _ = guard.write_all(b"chcp 65001\r\n");
-                        let _ = guard.flush();
-                    });
-                }
+                // Enter the tokio runtime context so spawn_blocking inside
+                // LocalSession::new can find an active runtime handle.
+                let _guard = app.rt.enter();
+                let session_result = LocalSession::new(
+                    id.clone(),
+                    vec![local_profile.shell.clone()],
+                    tx,
+                );
+
+                let (session, error) = match session_result {
+                    Ok(s) => {
+                        // Switch terminal to UTF-8 so Chinese output renders correctly
+                        let w = s.writer.clone();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(std::time::Duration::from_millis(300));
+                            let mut guard = w.lock().unwrap();
+                            let _ = guard.write_all(b"chcp 65001\r\n");
+                            let _ = guard.flush();
+                        });
+                        (Some(s), None)
+                    }
+                    Err(e) => (None, Some(format!("{e:#}"))),
+                };
 
                 app.rt.spawn(async move {
                     while let Some(event) = rx.recv().await {
@@ -133,6 +143,8 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                     RunningSession {
                         grid,
                         local: session,
+                        error,
+                        scroll_offset: 0,
                     },
                 );
             }

@@ -15,7 +15,8 @@ pub struct LocalSession {
 }
 
 impl LocalSession {
-    pub fn new(id: String, shell: String, tx: Sender<SessionEvent>) -> anyhow::Result<Self> {
+    pub fn new(id: String, args: Vec<String>, tx: Sender<SessionEvent>) -> anyhow::Result<Self> {
+        anyhow::ensure!(!args.is_empty(), "args must not be empty");
         let pty_system = native_pty_system();
         let pair = pty_system.openpty(PtySize {
             rows: 24,
@@ -24,7 +25,10 @@ impl LocalSession {
             pixel_height: 0,
         })?;
 
-        let mut cmd = CommandBuilder::new(&shell);
+        let mut cmd = CommandBuilder::new(&args[0]);
+        for arg in &args[1..] {
+            cmd.arg(arg);
+        }
         cmd.cwd(std::env::current_dir().unwrap_or_default());
 
         let child = pair.slave.spawn_command(cmd)?;
@@ -54,6 +58,15 @@ impl LocalSession {
         })
     }
 
+    pub fn resize(&self, cols: u16, rows: u16) {
+        let _ = self._master.resize(portable_pty::PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        });
+    }
+
     pub fn kill(&mut self) {
         let _ = self.child.kill();
     }
@@ -67,7 +80,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_local_session_receives_output() {
         let (tx, mut rx) = tokio::sync::mpsc::channel(32);
-        let mut session = LocalSession::new("test-id".to_string(), "cmd.exe".to_string(), tx)
+        let mut session = LocalSession::new("test-id".to_string(), vec!["cmd.exe".to_string()], tx)
             .expect("failed to create session");
 
         // Give cmd.exe a moment to initialise before sending input
