@@ -1,19 +1,29 @@
+#![allow(dead_code)]
+
 use crate::theme::apply_theme;
 use egui::Context;
-use oxijade_config::{load_profiles, ProfileStore};
+use oxijade_config::{load_profiles, LocalProfile, ProfileStore, SessionGroup, SessionProfile};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+pub struct RunningSession {
+    pub grid: Arc<Mutex<oxijade_core::terminal::TerminalGrid>>,
+    pub local: Option<oxijade_core::session::local::LocalSession>,
+}
 
 pub struct OxiJadeApp {
     pub active_tab: Option<String>,
     pub open_tabs: Vec<String>,
     pub sidebar_width: f32,
     pub profiles: ProfileStore,
+    pub running: HashMap<String, RunningSession>,
+    pub rt: tokio::runtime::Runtime,
 }
 
 impl Default for OxiJadeApp {
     fn default() -> Self {
         let mut profiles = load_profiles();
         if profiles.groups.is_empty() {
-            use oxijade_config::{LocalProfile, SessionGroup, SessionProfile};
             profiles.groups.push(SessionGroup {
                 name: "本地".to_string(),
                 sessions: vec![SessionProfile::Local(LocalProfile {
@@ -28,6 +38,8 @@ impl Default for OxiJadeApp {
             open_tabs: Vec::new(),
             sidebar_width: 200.0,
             profiles,
+            running: HashMap::new(),
+            rt: tokio::runtime::Runtime::new().unwrap(),
         }
     }
 }

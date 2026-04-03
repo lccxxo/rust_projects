@@ -88,6 +88,42 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
         if !app.open_tabs.contains(&id) {
             app.open_tabs.push(id.clone());
         }
-        app.active_tab = Some(id);
+        app.active_tab = Some(id.clone());
+
+        // Launch PTY session if not already running
+        if !app.running.contains_key(&id) {
+            if let SessionProfile::Local(local_profile) = profile {
+                use crate::app::RunningSession;
+                use oxijade_core::session::local::LocalSession;
+                use oxijade_core::session::SessionEvent;
+                use oxijade_core::terminal::TerminalGrid;
+                use std::sync::{Arc, Mutex};
+
+                let grid = Arc::new(Mutex::new(TerminalGrid::new(220, 50)));
+                let grid_clone = grid.clone();
+                let (tx, mut rx) = tokio::sync::mpsc::channel::<SessionEvent>(256);
+                let session = LocalSession::new(id.clone(), local_profile.shell.clone(), tx).ok();
+
+                app.rt.spawn(async move {
+                    while let Some(event) = rx.recv().await {
+                        match event {
+                            SessionEvent::Output(bytes) => {
+                                let mut g = grid_clone.lock().unwrap();
+                                g.process_bytes(&bytes);
+                            }
+                            SessionEvent::Exited => break,
+                        }
+                    }
+                });
+
+                app.running.insert(
+                    id,
+                    RunningSession {
+                        grid,
+                        local: session,
+                    },
+                );
+            }
+        }
     }
 }
