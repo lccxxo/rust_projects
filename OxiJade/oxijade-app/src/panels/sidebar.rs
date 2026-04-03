@@ -1,8 +1,9 @@
 // oxijade-app/src/panels/sidebar.rs
 use crate::app::OxiJadeApp;
+use crate::panels::sftp_panel::{SftpPanelState, SftpStatus};
 use crate::theme::Theme;
 use egui::{Color32, RichText, Ui};
-use oxijade_config::SessionProfile;
+use oxijade_config::{SessionProfile, SshAuth};
 use std::io::Write;
 
 pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
@@ -185,6 +186,153 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                         }
                     }
                 });
+
+                // 启动 SFTP 后台任务（仅密钥认证时自动连接）
+                if session.is_some() {
+                    use oxijade_core::sftp::{SftpRequest, SftpResponse};
+
+                    let (sftp_req_tx, mut sftp_req_rx) =
+                        tokio::sync::mpsc::channel::<SftpRequest>(32);
+                    let (sftp_resp_tx, sftp_resp_rx) =
+                        tokio::sync::mpsc::channel::<SftpResponse>(32);
+
+                    let host = ssh_profile.host.clone();
+                    let port = ssh_profile.port;
+                    let username = ssh_profile.username.clone();
+                    let auth = ssh_profile.auth.clone();
+
+                    app.rt.spawn(async move {
+                        let connect_result = match &auth {
+                            SshAuth::Key { path } => {
+                                oxijade_core::sftp::connect_key(&host, port, &username, path).await
+                            }
+                            SshAuth::Password => {
+                                sftp_resp_tx
+                                    .send(SftpResponse::Error(
+                                        "密码认证：请在 SFTP 面板手动输入密码后重连".into(),
+                                    ))
+                                    .await
+                                    .ok();
+                                return;
+                            }
+                        };
+
+                        match connect_result {
+                            Err(e) => {
+                                sftp_resp_tx
+                                    .send(SftpResponse::Error(e.to_string()))
+                                    .await
+                                    .ok();
+                            }
+                            Ok(sftp_session) => {
+                                match oxijade_core::sftp::list_dir(&sftp_session, "/").await {
+                                    Ok(entries) => {
+                                        sftp_resp_tx
+                                            .send(SftpResponse::DirListing {
+                                                path: "/".into(),
+                                                entries,
+                                            })
+                                            .await
+                                            .ok();
+                                    }
+                                    Err(e) => {
+                                        sftp_resp_tx
+                                            .send(SftpResponse::Error(e.to_string()))
+                                            .await
+                                            .ok();
+                                    }
+                                }
+
+                                while let Some(req) = sftp_req_rx.recv().await {
+                                    match req {
+                                        SftpRequest::ListDir(path) => {
+                                            match oxijade_core::sftp::list_dir(
+                                                &sftp_session,
+                                                &path,
+                                            )
+                                            .await
+                                            {
+                                                Ok(entries) => {
+                                                    sftp_resp_tx
+                                                        .send(SftpResponse::DirListing {
+                                                            path,
+                                                            entries,
+                                                        })
+                                                        .await
+                                                        .ok();
+                                                }
+                                                Err(e) => {
+                                                    sftp_resp_tx
+                                                        .send(SftpResponse::Error(e.to_string()))
+                                                        .await
+                                                        .ok();
+                                                }
+                                            }
+                                        }
+                                        SftpRequest::Download { remote, local } => {
+                                            match oxijade_core::sftp::download(
+                                                &sftp_session,
+                                                &remote,
+                                                &local,
+                                            )
+                                            .await
+                                            {
+                                                Ok(()) => {
+                                                    sftp_resp_tx
+                                                        .send(SftpResponse::DownloadDone { local })
+                                                        .await
+                                                        .ok();
+                                                }
+                                                Err(e) => {
+                                                    sftp_resp_tx
+                                                        .send(SftpResponse::Error(e.to_string()))
+                                                        .await
+                                                        .ok();
+                                                }
+                                            }
+                                        }
+                                        SftpRequest::Upload { local, remote } => {
+                                            match oxijade_core::sftp::upload(
+                                                &sftp_session,
+                                                &local,
+                                                &remote,
+                                            )
+                                            .await
+                                            {
+                                                Ok(()) => {
+                                                    sftp_resp_tx
+                                                        .send(SftpResponse::UploadDone)
+                                                        .await
+                                                        .ok();
+                                                }
+                                                Err(e) => {
+                                                    sftp_resp_tx
+                                                        .send(SftpResponse::Error(e.to_string()))
+                                                        .await
+                                                        .ok();
+                                                }
+                                            }
+                                        }
+                                        SftpRequest::Disconnect => break,
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    app.sftp_panel = Some(SftpPanelState {
+                        session_id: id.clone(),
+                        host: ssh_profile.host.clone(),
+                        username: ssh_profile.username.clone(),
+                        current_path: "/".into(),
+                        entries: vec![],
+                        status: SftpStatus::Connecting,
+                        password_input: String::new(),
+                        show_password_dialog: false,
+                        tx: Some(sftp_req_tx),
+                        rx: Some(sftp_resp_rx),
+                    });
+                }
 
                 app.running.insert(
                     id,

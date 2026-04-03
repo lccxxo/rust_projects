@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
 use crate::dialogs::DialogState;
+use crate::panels::sftp_panel::{SftpPanelState, SftpStatus};
 use crate::theme::apply_theme;
-use egui::Context;
+use egui::{Context, RichText};
 use oxijade_config::{load_profiles, LocalProfile, ProfileStore, SessionGroup, SessionProfile};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -38,6 +39,7 @@ pub struct OxiJadeApp {
     pub running: HashMap<String, RunningSession>,
     pub rt: tokio::runtime::Runtime,
     pub dialog: DialogState,
+    pub sftp_panel: Option<SftpPanelState>,
 }
 
 impl Default for OxiJadeApp {
@@ -61,6 +63,7 @@ impl Default for OxiJadeApp {
             running: HashMap::new(),
             rt: tokio::runtime::Runtime::new().unwrap(),
             dialog: DialogState::None,
+            sftp_panel: None,
         }
     }
 }
@@ -115,6 +118,16 @@ impl eframe::App for OxiJadeApp {
                             .size(11.0),
                     );
                 }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new(
+                            "Ctrl+Shift+F: SFTP  |  Ctrl+Shift+H/V: 分屏  |  Ctrl+Shift+W: 关闭分屏",
+                        )
+                        .color(crate::theme::Theme::TEXT_MUTED)
+                        .size(10.0),
+                    );
+                });
             });
         });
 
@@ -125,17 +138,38 @@ impl eframe::App for OxiJadeApp {
                 crate::panels::sidebar::show(ui, self);
             });
 
-        // Ctrl+Shift+H 水平分屏，Ctrl+Shift+V 垂直分屏，Ctrl+Shift+W 关闭分屏
+        // Ctrl+Shift+H 水平分屏，Ctrl+Shift+V 垂直分屏，Ctrl+Shift+W 关闭分屏，Ctrl+Shift+F SFTP 面板
         let kb = ctx.input(|i| {
             let cs = egui::Modifiers { ctrl: true, shift: true, ..Default::default() };
             let split_h = i.key_pressed(egui::Key::H) && i.modifiers == cs;
             let split_v = i.key_pressed(egui::Key::V) && i.modifiers == cs;
             let close_s = i.key_pressed(egui::Key::W) && i.modifiers == cs;
-            (split_h, split_v, close_s)
+            let sftp_f = i.key_pressed(egui::Key::F) && i.modifiers == cs;
+            (split_h, split_v, close_s, sftp_f)
         });
 
+        // Ctrl+Shift+F 切换 SFTP 面板
+        if kb.3 {
+            if self.sftp_panel.is_some() {
+                self.sftp_panel = None;
+            } else {
+                self.sftp_panel = Some(SftpPanelState {
+                    session_id: self.active_tab.clone().unwrap_or_default(),
+                    host: String::new(),
+                    username: String::new(),
+                    current_path: "/".into(),
+                    entries: vec![],
+                    status: SftpStatus::Disconnected,
+                    password_input: String::new(),
+                    show_password_dialog: false,
+                    tx: None,
+                    rx: None,
+                });
+            }
+        }
+
         if let Some(tab_id) = self.active_tab.clone() {
-            if (kb.0 || kb.1) && self.running.contains_key(&tab_id) {
+            if (kb.0 || kb.1) && !kb.3 && self.running.contains_key(&tab_id) {
                 let dir = if kb.0 { SplitDir::Horizontal } else { SplitDir::Vertical };
                 let sec_id = format!("{tab_id}-split");
                 if !self.running.contains_key(&sec_id) {
@@ -191,6 +225,40 @@ impl eframe::App for OxiJadeApp {
                     primary.split = None;
                 }
             }
+        }
+
+        // SFTP 右侧面板
+        if self.sftp_panel.is_some() {
+            egui::SidePanel::right("sftp_panel")
+                .min_width(280.0)
+                .default_width(320.0)
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("SFTP 文件传输")
+                                .color(crate::theme::Theme::TEXT_PRIMARY)
+                                .size(13.0)
+                                .strong(),
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui
+                                .add(
+                                    egui::Label::new(
+                                        RichText::new("×")
+                                            .size(14.0)
+                                            .color(crate::theme::Theme::TEXT_MUTED),
+                                    )
+                                    .sense(egui::Sense::click()),
+                                )
+                                .clicked()
+                            {
+                                self.sftp_panel = None;
+                            }
+                        });
+                    });
+                    ui.separator();
+                    crate::panels::sftp_panel::show(ui, self);
+                });
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
