@@ -118,6 +118,13 @@ async fn open_sftp_session(
     Ok(sftp)
 }
 
+/// 获取 SFTP 连接的起始（Home）目录
+pub async fn home_dir(sftp: &SftpSession) -> String {
+    sftp.canonicalize(".")
+        .await
+        .unwrap_or_else(|_| "/".to_string())
+}
+
 /// 列出目录
 pub async fn list_dir(sftp: &SftpSession, path: &str) -> anyhow::Result<Vec<SftpEntry>> {
     let read_dir = sftp.read_dir(path).await.context("read_dir 失败")?;

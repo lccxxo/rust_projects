@@ -16,6 +16,7 @@ pub struct SshFormState {
     pub username: String,
     pub use_key: bool,
     pub key_path: String,
+    pub password: String,
     pub proxy_jump: String,
     pub editing_id: Option<String>,
     pub error: Option<String>,
@@ -30,6 +31,7 @@ impl Default for SshFormState {
             username: String::new(),
             use_key: true,
             key_path: String::new(),
+            password: String::new(),
             proxy_jump: String::new(),
             editing_id: None,
             error: None,
@@ -79,7 +81,7 @@ pub fn show_ssh_form(ctx: &egui::Context, state: &mut SshFormState) -> SshFormAc
                 ui.label("认证方式");
                 ui.horizontal(|ui| {
                     ui.radio_value(&mut state.use_key, true, "密钥");
-                    ui.radio_value(&mut state.use_key, false, "密码（由终端输入）");
+                    ui.radio_value(&mut state.use_key, false, "密码");
                 });
                 ui.end_row();
 
@@ -96,6 +98,10 @@ pub fn show_ssh_form(ctx: &egui::Context, state: &mut SshFormState) -> SshFormAc
                             }
                         }
                     });
+                    ui.end_row();
+                } else {
+                    ui.label("密码");
+                    ui.add(egui::TextEdit::singleline(&mut state.password).password(true));
                     ui.end_row();
                 }
 
@@ -124,7 +130,9 @@ pub fn show_ssh_form(ctx: &egui::Context, state: &mut SshFormState) -> SshFormAc
                             path: state.key_path.trim().to_string(),
                         }
                     } else {
-                        SshAuth::Password
+                        SshAuth::Password {
+                            password: state.password.clone(),
+                        }
                     };
                     let jump = state.proxy_jump.trim();
                     let profile = SshProfile {

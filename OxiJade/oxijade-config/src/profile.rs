@@ -22,7 +22,11 @@ pub struct SshProfile {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum SshAuth {
-    Password,
+    Password {
+        /// 明文密码（可选，为空则每次手动输入）
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        password: String,
+    },
     Key { path: String },
 }
 
@@ -74,7 +78,7 @@ mod tests {
                 host: "192.168.1.10".to_string(),
                 port: 22,
                 username: "user".to_string(),
-                auth: SshAuth::Password,
+                auth: SshAuth::Password { password: String::new() },
                 proxy_jump: None,
             })],
         };

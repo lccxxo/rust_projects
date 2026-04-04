@@ -72,10 +72,60 @@ impl eframe::App for OxiJadeApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         apply_theme(ctx);
 
-        // 终端激活时：
-        // 1. 从事件队列删除 Tab 按下事件，防止 egui 焦点循环
-        // 2. 清除当前已有的键盘焦点，确保没有 UI 控件处于聚焦状态
+        // 终端激活时处理 Tab 补全 + 防止 egui 焦点循环
         if self.active_tab.is_some() {
+            // Fix 1: 先把 Tab 字节发给当前激活的终端 pane，再从事件队列移除
+            let tab_count = ctx.input(|i| {
+                i.events
+                    .iter()
+                    .filter(|e| {
+                        matches!(
+                            e,
+                            egui::Event::Key {
+                                key: egui::Key::Tab,
+                                pressed: true,
+                                ..
+                            }
+                        )
+                    })
+                    .count()
+            });
+            if tab_count > 0 {
+                // 确定当前激活 pane 的会话 ID
+                let session_id = if let Some(tab_id) = &self.active_tab {
+                    if let Some(running) = self.running.get(tab_id) {
+                        if let Some(split) = &running.split {
+                            if split.focus_secondary {
+                                split.session_id.clone()
+                            } else {
+                                tab_id.clone()
+                            }
+                        } else {
+                            tab_id.clone()
+                        }
+                    } else {
+                        tab_id.clone()
+                    }
+                } else {
+                    String::new()
+                };
+                let writer = self
+                    .running
+                    .get(&session_id)
+                    .and_then(|r| r.local.as_ref())
+                    .map(|l| l.writer.clone());
+                if let Some(w) = writer {
+                    for _ in 0..tab_count {
+                        let w2 = w.clone();
+                        self.rt.spawn(async move {
+                            let mut g = w2.lock().unwrap();
+                            let _ = g.write_all(b"\t");
+                            let _ = g.flush();
+                        });
+                    }
+                }
+            }
+            // 从事件队列移除 Tab，防止 egui 焦点循环
             ctx.input_mut(|i| {
                 i.events.retain(|e| {
                     !matches!(
@@ -88,7 +138,6 @@ impl eframe::App for OxiJadeApp {
                     )
                 });
             });
-            // 强制清除 UI 焦点，即使 Tab 被其他路径处理也不会停留在按钮上
             ctx.memory_mut(|m| m.stop_text_input());
         }
 
@@ -169,7 +218,14 @@ impl eframe::App for OxiJadeApp {
         }
 
         if let Some(tab_id) = self.active_tab.clone() {
-            if (kb.0 || kb.1) && !kb.3 && self.running.contains_key(&tab_id) {
+            // 只允许对主 pane（非 -split 后缀）且尚未分屏的会话执行分屏
+            let already_split = self
+                .running
+                .get(&tab_id)
+                .map(|r| r.split.is_some())
+                .unwrap_or(false);
+            let is_secondary = tab_id.ends_with("-split");
+            if (kb.0 || kb.1) && !kb.3 && !already_split && !is_secondary && self.running.contains_key(&tab_id) {
                 let dir = if kb.0 { SplitDir::Horizontal } else { SplitDir::Vertical };
                 let sec_id = format!("{tab_id}-split");
                 if !self.running.contains_key(&sec_id) {

@@ -59,21 +59,21 @@ mod tests {
 
     #[test]
     fn test_proxy_jump_args() {
-        let args = build_args(&make_profile(SshAuth::Password, Some("jump.example.com")));
+        let args = build_args(&make_profile(SshAuth::Password { password: String::new() }, Some("jump.example.com")));
         assert!(args.contains(&"-J".to_string()));
         assert!(args.contains(&"jump.example.com".to_string()));
     }
 
     #[test]
     fn test_password_auth_no_key_flag() {
-        let args = build_args(&make_profile(SshAuth::Password, None));
+        let args = build_args(&make_profile(SshAuth::Password { password: String::new() }, None));
         assert!(!args.contains(&"-i".to_string()));
         assert!(!args.contains(&"-J".to_string()));
     }
 
     #[test]
     fn test_empty_proxy_jump_ignored() {
-        let args = build_args(&make_profile(SshAuth::Password, Some("")));
+        let args = build_args(&make_profile(SshAuth::Password { password: String::new() }, Some("")));
         assert!(!args.contains(&"-J".to_string()));
     }
 }

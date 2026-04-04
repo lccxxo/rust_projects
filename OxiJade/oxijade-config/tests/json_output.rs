@@ -18,7 +18,7 @@ fn test_json_output() {
         host: "192.168.1.10".to_string(),
         port: 22,
         username: "user".to_string(),
-        auth: SshAuth::Password,
+        auth: SshAuth::Password { password: String::new() },
         proxy_jump: None,
     });
     println!("\n=== SshProfile with Password (no proxy_jump) ===");

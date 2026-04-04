@@ -175,6 +175,22 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                     Err(e) => (None, Some(format!("{e:#}"))),
                 };
 
+                // 密码认证 + 已保存密码：在 PTY 登录提示出现后自动发送
+                if let (Some(ref s), SshAuth::Password { password }) = (&session, &ssh_profile.auth) {
+                    if !password.is_empty() {
+                        let w = s.writer.clone();
+                        let pwd = password.clone();
+                        std::thread::spawn(move || {
+                            // 等待 ssh.exe 输出密码提示（通常 1-2 秒）
+                            std::thread::sleep(std::time::Duration::from_millis(1500));
+                            let mut g = w.lock().unwrap();
+                            let _ = g.write_all(pwd.as_bytes());
+                            let _ = g.write_all(b"\r\n");
+                            let _ = g.flush();
+                        });
+                    }
+                }
+
                 app.rt.spawn(async move {
                     while let Some(event) = rx.recv().await {
                         match event {
@@ -187,7 +203,7 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                     }
                 });
 
-                // 启动 SFTP 后台任务（仅密钥认证时自动连接）
+                // 启动 SFTP 后台任务
                 if session.is_some() {
                     use oxijade_core::sftp::{SftpRequest, SftpResponse};
 
@@ -206,10 +222,16 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                             SshAuth::Key { path } => {
                                 oxijade_core::sftp::connect_key(&host, port, &username, path).await
                             }
-                            SshAuth::Password => {
+                            SshAuth::Password { password } if !password.is_empty() => {
+                                oxijade_core::sftp::connect_password(
+                                    &host, port, &username, password,
+                                )
+                                .await
+                            }
+                            SshAuth::Password { .. } => {
                                 sftp_resp_tx
                                     .send(SftpResponse::Error(
-                                        "密码认证：请在 SFTP 面板手动输入密码后重连".into(),
+                                        "密码未保存：请编辑会话填写密码后重新点击连接".into(),
                                     ))
                                     .await
                                     .ok();
@@ -225,11 +247,13 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                                     .ok();
                             }
                             Ok(sftp_session) => {
-                                match oxijade_core::sftp::list_dir(&sftp_session, "/").await {
+                                // 以 home 目录作为初始目录
+                                let home = oxijade_core::sftp::home_dir(&sftp_session).await;
+                                match oxijade_core::sftp::list_dir(&sftp_session, &home).await {
                                     Ok(entries) => {
                                         sftp_resp_tx
                                             .send(SftpResponse::DirListing {
-                                                path: "/".into(),
+                                                path: home,
                                                 entries,
                                             })
                                             .await
@@ -324,7 +348,7 @@ fn session_row(ui: &mut Ui, profile: &SessionProfile, app: &mut OxiJadeApp) {
                         session_id: id.clone(),
                         host: ssh_profile.host.clone(),
                         username: ssh_profile.username.clone(),
-                        current_path: "/".into(),
+                        current_path: "~".into(),
                         entries: vec![],
                         status: SftpStatus::Connecting,
                         password_input: String::new(),
