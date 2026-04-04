@@ -180,6 +180,16 @@ pub fn show_dialog(ctx: &egui::Context, app: &mut crate::app::OxiJadeApp) {
         }
         SshFormAction::Confirm(profile) => {
             use oxijade_config::{save_profiles, SessionProfile};
+            // 重名检测：同名且不同 ID 的会话不允许保存
+            let dup = app.profiles.groups.iter()
+                .flat_map(|g| &g.sessions)
+                .any(|s| s.name() == profile.name && s.id() != profile.id);
+            if dup {
+                if let DialogState::SshForm(ref mut state) = app.dialog {
+                    state.error = Some(format!("名称「{}」已存在，请使用不同的名称", profile.name));
+                }
+                return;
+            }
             let id = profile.id.clone();
             let ssh_profile = profile.clone();
             let mut found = false;

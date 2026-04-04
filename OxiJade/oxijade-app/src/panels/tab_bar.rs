@@ -1,7 +1,7 @@
 // oxijade-app/src/panels/tab_bar.rs
 use crate::app::OxiJadeApp;
 use crate::theme::Theme;
-use egui::{Color32, RichText, Ui};
+use egui::{Color32, RichText, Sense, Ui};
 use oxijade_config::SessionProfile;
 
 pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
@@ -60,10 +60,24 @@ pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
                                 })
                                 .size(12.0),
                         );
-                        if ui
-                            .small_button(RichText::new("×").color(Theme::TEXT_MUTED))
-                            .clicked()
-                        {
+
+                        // 用 Label + Sense::click() 代替 Button，
+                        // Label 不参与 Tab 键焦点循环，不会被意外激活。
+                        let close_resp = ui.add(
+                            egui::Label::new(RichText::new("×").color(Theme::TEXT_MUTED).size(13.0))
+                                .sense(Sense::click()),
+                        );
+                        if close_resp.hovered() {
+                            // 悬停时变亮，提示可点击
+                            ui.painter().text(
+                                close_resp.rect.center(),
+                                egui::Align2::CENTER_CENTER,
+                                "×",
+                                egui::FontId::proportional(13.0),
+                                egui::Color32::from_rgb(243, 139, 168),
+                            );
+                        }
+                        if close_resp.clicked() {
                             to_close = Some(tab_id.clone());
                         }
                     });
@@ -71,7 +85,7 @@ pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
 
             if tab_response
                 .response
-                .interact(egui::Sense::click())
+                .interact(Sense::click())
                 .clicked()
             {
                 app.active_tab = Some(tab_id.clone());
@@ -83,14 +97,37 @@ pub fn show(ui: &mut Ui, app: &mut OxiJadeApp) {
             if app.active_tab.as_deref() == Some(id.as_str()) {
                 app.active_tab = app.open_tabs.last().cloned();
             }
+            // Kill PTY 进程并清理 running 状态
+            if let Some(mut rs) = app.running.remove(&id) {
+                if let Some(ref mut s) = rs.local {
+                    s.kill();
+                }
+                // 同时清理分屏副 pane
+                if let Some(split) = rs.split {
+                    if let Some(mut sec) = app.running.remove(&split.session_id) {
+                        if let Some(ref mut s) = sec.local {
+                            s.kill();
+                        }
+                    }
+                }
+            }
         }
 
-        if ui
-            .button(RichText::new("+").color(Theme::ACCENT_LOCAL))
-            .clicked()
-        {
-            // Plan 2
+        // 「＋」同样用 Label，不获得键盘焦点
+        let add_resp = ui.add(
+            egui::Label::new(RichText::new("＋").color(Theme::TEXT_MUTED).size(14.0))
+                .sense(Sense::click()),
+        );
+        if add_resp.hovered() {
+            ui.painter().text(
+                add_resp.rect.center(),
+                egui::Align2::CENTER_CENTER,
+                "＋",
+                egui::FontId::proportional(14.0),
+                Theme::ACCENT_LOCAL,
+            );
         }
+        // Plan 2: open new session dialog
     });
 }
 
