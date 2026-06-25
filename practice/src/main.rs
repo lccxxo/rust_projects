@@ -1,4 +1,5 @@
 mod timer;
+mod ui;
 
 use ratatui::{
     layout::{Constraint, Direction, Layout},
