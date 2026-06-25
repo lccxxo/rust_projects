@@ -18,7 +18,7 @@
 - No config, no persistence, no tests (TUI visual verification)
 
 ---
-````markdown
+
 ### Task 1: Create timer.rs — PomodoroFSM State Machine
 
 **Files:**
@@ -26,16 +26,16 @@
 
 **Interfaces:**
 - Produces:
-  - `Phase` enum: `{Work, ShortBreak, LongBreak}` — `Copy`
-  - `RunState` enum: `{Running, Paused}` — `Copy`
+  - `Phase` enum: `{Work, ShortBreak, LongBreak}` — Copy+PartialEq
+  - `RunState` enum: `{Running, Paused}` — Copy+PartialEq
   - `PomodoroFSM` struct with public fields `phase: Phase`, `run_state: RunState`, `completed: u8`, `remaining: u16`
   - `PomodoroFSM::new() -> Self`
   - `PomodoroFSM::tick(&mut self) -> bool` — advance countdown; returns true on auto-transition
   - `PomodoroFSM::toggle_pause(&mut self)`
-  - `PomodoroFSM::reset_phase(&mut self)` — reset current phase's duration, keep paused/running state
+  - `PomodoroFSM::reset_phase(&mut self)` — reset current phase duration to full, stays in same run_state
   - `PomodoroFSM::phase_label(&self) -> &'static str`
 
-- [ ] **Step 1: Write src/timer.rs**
+Step 1: Write src/timer.rs
 
 ```rust
 use std::time::{Duration, Instant};
@@ -143,30 +143,30 @@ impl PomodoroFSM {
 }
 ```
 
-- [ ] **Step 2: Commit**
+Step 2: Commit
 
 ```bash
 git add src/timer.rs && git commit -m "feat: add PomodoroFSM state machine with 25/5/15 cycle"
 ```
-````
 
-````markdown
+---
+
 ### Task 2: Create ui.rs — Ink-Wash Renderer
 
 **Files:**
 - Create: `src/ui.rs`
 
 **Interfaces:**
-- Consumes: `PomodoroFSM` (Task 1), `Phase`, `RunState` (Task 1)
-- Produces: `pub fn render(f: &mut Frame, timer: &PomodoroFSM)` — full-frame render
+- Consumes: `crate::timer::{PomodoroFSM, RunState}` (from Task 1)
+- Produces: `pub fn render(f: &mut ratatui::Frame, timer: &PomodoroFSM)` — full-frame render
 
-- [ ] **Step 1: Write src/ui.rs**
+Step 1: Write src/ui.rs
 
 ```rust
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    text::{Line, Span, Text},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
@@ -200,14 +200,11 @@ pub fn render(f: &mut Frame, timer: &PomodoroFSM) {
         ])
         .split(area);
 
-    // Full-screen warm white background
     let bg_block = Block::default().style(Style::default().bg(bg));
     f.render_widget(bg_block, area);
 
-    // Timer
     render_timer(f, chunks[1], timer, ink, accent);
 
-    // Phase label
     let label = timer.phase_label();
     let label_text = if timer.run_state == RunState::Paused {
         format!("{label}  ·  暂停")
@@ -219,10 +216,8 @@ pub fn render(f: &mut Frame, timer: &PomodoroFSM) {
         .style(Style::default().fg(accent));
     f.render_widget(label_para, chunks[3]);
 
-    // Pomodoro dots
     render_dots(f, chunks[4], timer.completed, dot_done, dot_pending);
 
-    // Help bar
     let help = match timer.run_state {
         RunState::Running => "空格 暂停   R 重置   Q 退出",
         RunState::Paused => "空格 开始   R 重置   Q 退出",
@@ -258,16 +253,16 @@ fn render_timer(f: &mut Frame, area: Rect, timer: &PomodoroFSM, ink: Color, acce
     f.render_widget(time_para, v_chunks[1]);
 }
 
-fn render_dots(f: &mut Frame, area: Rect, completed: u8, done_color: Color, pending_color: Color) {
+fn render_dots(f: &mut Frame, area: Rect, completed: u8, done: Color, pending: Color) {
     let mut spans: Vec<Span> = Vec::with_capacity(7);
     for i in 0..4u8 {
         if i > 0 {
             spans.push(Span::from("  "));
         }
         if i < completed {
-            spans.push(Span::styled("●", Style::default().fg(done_color)));
+            spans.push(Span::styled("●", Style::default().fg(done)));
         } else {
-            spans.push(Span::styled("○", Style::default().fg(pending_color)));
+            spans.push(Span::styled("○", Style::default().fg(pending)));
         }
     }
     let dot_para = Paragraph::new(Line::from(spans)).alignment(Alignment::Center);
@@ -286,23 +281,24 @@ fn render_too_small(f: &mut Frame, area: Rect) {
 }
 ```
 
-- [ ] **Step 2: Commit**
+Step 2: Commit
 
 ```bash
 git add src/ui.rs && git commit -m "feat: add ink-wash renderer with Kindle e-ink palette"
 ```
-````
 
-````markdown
+---
+
 ### Task 3: Rewrite main.rs — Wire Event Loop
 
 **Files:**
 - Modify: `src/main.rs` (full rewrite)
 
 **Interfaces:**
-- Consumes: `PomodoroFSM` (Task 1), `ui::render` (Task 2)
+- Consumes: `mod timer` (Task 1), `mod ui` (Task 2), `PomodoroFSM::new()`, `ui::render()`
+- Produces: working binary
 
-- [ ] **Step 1: Rewrite src/main.rs**
+Step 1: Rewrite src/main.rs
 
 ```rust
 use std::io;
@@ -346,24 +342,24 @@ fn main() -> io::Result<()> {
 }
 ```
 
-- [ ] **Step 2: Commit**
+Step 2: Commit
 
 ```bash
 git add src/main.rs && git commit -m "feat: wire ink-wash pomodoro timer event loop"
 ```
-````
 
-````markdown
+---
+
 ### Task 4: Build and Verify
 
-- [ ] **Step 1: Build the project**
+Step 1: Build the project
 
 ```bash
 cargo build 2>&1
 ```
 Expected: `Finished` with no errors, no warnings.
 
-- [ ] **Step 2: Run and visually verify**
+Step 2: Run and visually verify
 
 ```bash
 cargo run
@@ -378,4 +374,3 @@ Expected behavior checklist:
 - Press Space: label changes, timer counts down
 - Press R: timer resets to 25:00
 - Press Q/Esc: clean exit, terminal restored
-````
