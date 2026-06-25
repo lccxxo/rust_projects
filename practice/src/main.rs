@@ -1,6 +1,6 @@
 use std::io;
 use std::time::Duration;
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 
 mod timer;
 mod ui;
@@ -22,6 +22,7 @@ fn main() -> io::Result<()> {
                 }
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => quit = true,
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => quit = true,
                     KeyCode::Char(' ') => timer.toggle_pause(),
                     KeyCode::Char('r') => timer.reset_phase(),
                     _ => {}

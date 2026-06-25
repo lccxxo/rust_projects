@@ -45,8 +45,13 @@ impl PomodoroFSM {
         if elapsed < Duration::from_secs(1) {
             return false;
         }
-        self.last_tick = Instant::now();
         let secs = elapsed.as_secs().min(u16::MAX as u64) as u16;
+        // Drift-free: accumulate exact 1s steps; re-sync if suspended >5s
+        if elapsed > Duration::from_secs(5) {
+            self.last_tick = Instant::now();
+        } else {
+            self.last_tick += Duration::from_secs(secs as u64);
+        }
         if secs >= self.remaining {
             self.remaining = 0;
             self.advance_phase();
