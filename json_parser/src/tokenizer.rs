@@ -11,7 +11,7 @@
 //! - `read_keyword`  — 解析 true / false / null
 
 use crate::char_iter::CharIter;
-use crate::error::{ParseError,};
+use crate::error::ParseError;
 use crate::types::Token;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>, ParseError> {
@@ -299,13 +299,15 @@ fn read_number(iter: &mut CharIter) -> Result<f64, ParseError> {
         }
     }
 
-    text.parse::<f64>().map_err(|_| iter.error(format!("invalid number literal: '{}'", text)))
+    text.parse::<f64>()
+        .map_err(|_| iter.error(format!("invalid number literal: '{}'", text)))
 }
 
 // 解析关键字 true false null
-fn read_keyword(iter: &mut CharIter, expected: &str) -> Result<(), ParseError> {    for expected_ch in expected.chars(){
+fn read_keyword(iter: &mut CharIter, expected: &str) -> Result<(), ParseError> {
+    for expected_ch in expected.chars() {
         match iter.next() {
-            Some(ch) if ch == expected_ch =>{
+            Some(ch) if ch == expected_ch => {
                 continue;
             }
             Some(ch) => {
@@ -324,7 +326,8 @@ fn read_keyword(iter: &mut CharIter, expected: &str) -> Result<(), ParseError> {
     if let Some(ch) = iter.peek() {
         if ch.is_ascii_alphanumeric() || ch == '_' {
             return Err(iter.error(format!(
-                "unexpected character '{}' after keyword '{}'", ch, expected
+                "unexpected character '{}' after keyword '{}'",
+                ch, expected
             )));
         }
     }

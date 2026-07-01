@@ -14,7 +14,8 @@
 //! - `tests`     — 单元测试
 
 // 子模块声明
-mod error;
-mod types;
 mod char_iter;
+mod error;
 mod tokenizer;
+mod tokenizer_test;
+mod types;

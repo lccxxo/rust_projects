@@ -17,5 +17,5 @@ pub enum Token {
     False,
     Null,
     String(String),
-    Number(f64)
+    Number(f64),
 }

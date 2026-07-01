@@ -4,7 +4,7 @@
 //! - `next()` — 消费并返回下一个字符，自动更新 Position
 //! - `save_pos()` + `error()` — 快照当前位置，构造 ParseError
 
-use crate::error::{ParseError,Position};
+use crate::error::{ParseError, Position};
 
 pub struct CharIter<'a> {
     chars: std::str::Chars<'a>, // 迭代器
