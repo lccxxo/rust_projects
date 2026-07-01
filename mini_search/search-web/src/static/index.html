@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniSearch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header>
+        <h1>MiniSearch</h1>
+        <span class="subtitle">轻量级网页搜索引擎</span>
+    </header>
+
+    <main>
+        <form id="search-form" autocomplete="off">
+            <div class="search-bar">
+                <input
+                    type="text"
+                    id="query-input"
+                    placeholder="输入关键词搜索..."
+                    autofocus
+                >
+                <button type="submit">搜索</button>
+            </div>
+        </form>
+
+        <div id="status-bar"></div>
+        <div id="results"></div>
+
+        <details id="crawl-section">
+            <summary>爬取新页面</summary>
+            <form id="crawl-form" class="crawl-form">
+                <label>
+                    URL:
+                    <input type="url" id="crawl-url" placeholder="https://example.com" required>
+                </label>
+                <label>
+                    深度:
+                    <input type="number" id="crawl-depth" value="0" min="0" max="3">
+                </label>
+                <button type="submit">开始爬取</button>
+            </form>
+            <div id="crawl-progress" class="crawl-progress hidden">
+                <div class="crawl-bar"><div class="crawl-fill"></div></div>
+                <p id="crawl-msg"></p>
+            </div>
+            <div id="crawled-pages" class="crawled-pages hidden"></div>
+        </details>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>

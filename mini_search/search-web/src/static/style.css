@@ -1,0 +1,356 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    min-height: 100vh;
+}
+
+header {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 20px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+header h1 {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+header .subtitle {
+    font-size: 14px;
+    color: #aaa;
+}
+
+main {
+    width: 100%;
+    max-width: 720px;
+    margin: 32px auto;
+    padding: 0 20px;
+    overflow-x: hidden;
+}
+
+/* ── Search Bar ─────────────────────── */
+
+.search-bar {
+    display: flex;
+    gap: 8px;
+}
+
+.search-bar input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-bar input:focus {
+    border-color: #1a1a2e;
+}
+
+.search-bar button {
+    padding: 12px 24px;
+    font-size: 16px;
+    background: #1a1a2e;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-bar button:hover {
+    background: #16213e;
+}
+
+/* ── Status Bar ─────────────────────── */
+
+#status-bar {
+    margin: 12px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+/* ── Results ────────────────────────── */
+
+.result-item {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.result-item .title {
+    font-size: 18px;
+    color: #1a0dab;
+    text-decoration: none;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    overflow-wrap: break-word;
+}
+
+.result-item .title:hover {
+    text-decoration: underline;
+}
+
+.result-item .url {
+    font-size: 13px;
+    color: #006621;
+    margin-bottom: 6px;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+.result-item .snippet {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+}
+
+.result-item .score {
+    font-size: 12px;
+    color: #999;
+    margin-top: 6px;
+}
+
+/* ── Pagination ─────────────────────── */
+
+.pagination {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.pagination button:hover {
+    background: #f0f0f0;
+}
+
+.pagination button.active {
+    background: #1a1a2e;
+    color: #fff;
+    border-color: #1a1a2e;
+}
+
+.pagination button:disabled {
+    color: #ccc;
+    cursor: default;
+}
+
+/* ── Crawl Section ──────────────────── */
+
+#crawl-section {
+    margin-top: 40px;
+    padding: 16px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+#crawl-section summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 12px;
+}
+
+.crawl-form {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.crawl-form label {
+    font-size: 14px;
+    color: #555;
+    min-width: 0;
+}
+
+.crawl-form label:first-child {
+    flex: 1;
+    min-width: 160px;
+}
+
+.crawl-form input {
+    display: block;
+    margin-top: 4px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.crawl-form input:focus {
+    border-color: #1a1a2e;
+}
+
+.crawl-form #crawl-url {
+    width: 100%;
+    max-width: 320px;
+}
+
+.crawl-form #crawl-depth {
+    width: 70px;
+    min-width: 50px;
+}
+
+.crawl-form button {
+    padding: 8px 16px;
+    font-size: 14px;
+    background: #2d6a4f;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.crawl-form button:hover {
+    background: #1b4332;
+}
+
+#crawl-msg {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #2d6a4f;
+}
+
+.crawl-progress {
+    margin-top: 12px;
+}
+
+.crawl-progress.hidden {
+    display: none;
+}
+
+.crawl-bar {
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.crawl-fill {
+    height: 100%;
+    width: 0%;
+    background: #2d6a4f;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.crawl-fill.running {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+#crawl-msg.error {
+    color: #c0392b;
+}
+
+/* ── Crawled Pages List ─────────────── */
+
+.crawled-pages {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.crawled-pages.hidden {
+    display: none;
+}
+
+.crawled-pages h3 {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 8px;
+}
+
+.crawled-pages ul {
+    list-style: none;
+    padding: 0;
+}
+
+.crawled-pages li {
+    padding: 4px 0;
+    font-size: 14px;
+}
+
+.crawled-pages a {
+    color: #1a0dab;
+    text-decoration: none;
+}
+
+.crawled-pages a:hover {
+    text-decoration: underline;
+}
+
+/* ── Empty State ────────────────────── */
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    margin-top: 60px;
+    font-size: 15px;
+}
+
+/* ── Responsive ──────────────────────── */
+
+@media (max-width: 600px) {
+    header {
+        padding: 16px 20px;
+    }
+
+    header h1 {
+        font-size: 20px;
+    }
+
+    main {
+        padding: 0 12px;
+    }
+
+    .crawl-form {
+        flex-direction: column;
+    }
+
+    .crawl-form #crawl-url {
+        max-width: 100%;
+    }
+
+    .search-bar {
+        flex-direction: column;
+    }
+
+    .search-bar button {
+        width: 100%;
+    }
+}

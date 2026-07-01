@@ -1,0 +1,11 @@
+[package]
+name = "search-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+search-indexer = { path = "../search-indexer" }
+tantivy = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
