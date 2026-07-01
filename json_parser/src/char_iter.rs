@@ -14,6 +14,7 @@ pub struct CharIter<'a> {
 }
 
 impl<'a> CharIter<'a> {
+    /// 从字符串切片创建
     pub fn new(input: &'a str) -> Self {
         CharIter {
             chars: input.chars(),
@@ -23,10 +24,12 @@ impl<'a> CharIter<'a> {
         }
     }
 
+    /// 保存当前位置 用于错误打印
     pub fn save_pos(&mut self) {
         self.save = self.pos;
     }
 
+    /// 构造 ParseError
     pub fn error(&self, msg: impl Into<String>) -> ParseError {
         ParseError {
             message: msg.into(),
@@ -34,6 +37,7 @@ impl<'a> CharIter<'a> {
         }
     }
 
+    /// 预读下一个字符 不消费
     pub fn peek(&mut self) -> Option<char> {
         if self.peeked.is_none() {
             self.peeked = self.chars.next();
@@ -41,6 +45,7 @@ impl<'a> CharIter<'a> {
         self.peeked
     }
 
+    /// 消费下一个字符
     pub fn next(&mut self) -> Option<char> {
         if let Some(ch) = self.peeked.take() {
             self.pos.advance(ch);

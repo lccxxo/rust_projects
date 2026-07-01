@@ -1,8 +1,17 @@
-//! JSON 解析器命令行入口。
-//!
-//! 从 stdin 读取 JSON 字符串，使用 json_parser 库解析后打印结果。
-//! 用法：`echo '{"key": 42}' | cargo run`
+use std::io::Read;
 
 fn main() {
-    println!("Hello, world!");
+    let mut input = String::new();
+    if let Err(e) = std::io::stdin().read_to_string(&mut input) {
+        eprintln!("error reading stdin: {}", e);
+        std::process::exit(1);
+    }
+
+    match json_parser::parse(&input) {
+        Ok(value) => println!("{:#?}", value),
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    }
 }

@@ -7,8 +7,8 @@ use std::fmt;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
-    line: usize, // 从1开始
-    col: usize,  // 从1开始 每个字符算1
+    pub line: usize, // 从1开始
+    pub col: usize,  // 从1开始 每个字符算1
 }
 
 impl Position {
