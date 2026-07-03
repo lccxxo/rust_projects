@@ -1,0 +1,18 @@
+[package]
+name = "unix_tools"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "unix_tools"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ut_cat"
+path = "src/bin/cat.rs"
+
+[dependencies]
+thiserror = "1"
+
+[dev-dependencies]
+tempfile = "3"
